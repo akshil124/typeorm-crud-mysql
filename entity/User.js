@@ -1,6 +1,6 @@
 const typeorm = require("typeorm")
 
-module.exports = new typeorm.EntitySchema({
+const User = new typeorm.EntitySchema({
     name: "User",
     tableName: "User",
     columns: {
@@ -14,3 +14,4 @@ module.exports = new typeorm.EntitySchema({
         },
     },
 })
+module.exports = User

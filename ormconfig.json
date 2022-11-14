@@ -1,0 +1,23 @@
+[
+  {
+    "name": "default",
+    "environment": "production",
+    "type": "mysql",
+    "host": "localhost",
+    "port": 3306,
+    "username": "root",
+    "password": "root",
+    "database": "user",
+    "logging": "error",
+    "entities": [
+      "dist/model/*.js"
+    ],
+    "migrations": [
+      "dist/migrations/*.js"
+    ],
+    "cli": {
+      "migrationsDir": "src/server/migrations"
+    },
+    "synchronize": true
+  }
+]
