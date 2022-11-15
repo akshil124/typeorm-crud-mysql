@@ -2,16 +2,20 @@ const express = require("express")
 const typeorm = require("typeorm")
 const bodyparser = require("body-parser")
 const User = require("./entity/User")
+const Hooby = require("./entity/hobby")
 const {createDatabase} = require("typeorm-extension")
 const app = express()
 app.use(bodyparser())
 
 ;(async () => {
     await createDatabase({ifNotExist: true})
-
+    dataSource.initialize().then(() => {
+        console.log("initialize")
+    }).catch((err) => {
+        console.log("err", err)
+    })
 //     process.exit(0);
- })();
-
+})();
 
 
 const dataSource = new typeorm.DataSource({
@@ -20,32 +24,121 @@ const dataSource = new typeorm.DataSource({
     port: 3306,
     username: "root",
     password: "root",
-    synchronize: true,
-    logging: false,
-    entities: [User],
     database: "user",
+    entities: [User, Hooby],
+    synchronize: true,
 })
 
-dataSource.initialize().then(()=>{
-    console.log("initialize")
-}).catch((err)=>{
-    console.log("err",err)
-})
+app.post("/adduser", async (req, res) => {
 
-app.post("/",(req,res)=>{
-    console.log("body")
+    var hobby = req?.body?.hobby?.map((l) => {
+        return {
+            name: l
+        }
+    })
+    var User = {
+        name: req?.body?.name,
+        email: req?.body?.email,
+        password: req?.body?.password,
+        hobby: hobby
+    }
 
-    let postRepository = dataSource.getRepository("User")
-    postRepository.save(req.body)
-        .then(()=> {
+    let postRepository = dataSource.getRepository("user")
+    postRepository.save(User)
+        .then(() => {
             res.send("data possted")
         }).catch((err) => {
-        console.log("err",err)
+        console.log("err", err)
         res.send(err)
     })
+
+    // or you can use QueryBuilder
+    // await dataSource
+    //     .createQueryBuilder()
+    //     .insert()
+    //     .into("user")
+    //     .values(User)
+    //     .execute().then(() => {
+    //         res.send("data posted")
+    //     }).catch((err) => {
+    //         res.send(err)
+    //     })
+
 })
 
+app.get("/getusers", async (req, res) => {
+    const user = await dataSource.getRepository("user").find()
+    const users = await user?.map((l) => {
+        return {
+            id: l?.id,
+            name: l?.name,
+            email: l?.email,
+            password: l?.password,
+            hobby: l?.hobby?.map((i)=>{
+                return i?.name
+            })
+        }
+    })
+    // console.log("user",users)
+    res.send(users)
+})
 
-app.listen(5000,()=>{
+app.get("/getusers/:id", async (req, res) => {
+    const data = await dataSource.getRepository("user").findOneBy({id: req.params.id})
+    const user = {
+        id: data?.id,
+        name: data?.name,
+        email: data?.email,
+        password: data?.password,
+        hobby: data?.hobby?.map((i)=>{
+            return i?.name
+        })
+    }
+    res.send(user)
+})
+
+app.delete("/deleteuser/:id", async (req, res) => {
+    const data = await dataSource.getRepository("user").findOneBy({id: req.params.id})
+    data?.hobby.map(async (l)=>{
+        await dataSource.getRepository("hobby").delete(l?.id)
+    })
+    await dataSource.getRepository("user").delete(req.params.id).then((data) => {
+        if (data.affected) {
+            res.send("user deleted")
+        }
+    })
+
+})
+
+app.put("/updateuser/:id", async (req, res) => {
+    const data = await dataSource.getRepository("user").findOneBy({id: req.params.id})
+    if(req?.body?.hobby){
+        console.log("hii")
+        data?.hobby.map(async (l)=>{
+            await dataSource.getRepository("hobby").delete(l?.id)
+        })
+    }
+
+    let user = {
+        id : parseInt(req.params.id) || data?.id,
+        name : req?.body?.name || data?.name,
+        email : req?.body?.email || data?.email,
+        password : req?.body?.password || data?.password,
+        hobby : req?.body?.hobby?.map((i)=>{
+            return {name : i}
+        }) || data?.hobby
+    }
+
+    await dataSource.getRepository('user').save(user).then((data) => {
+        if (data.affected) {
+            res.send("user updated")
+        }
+    }).catch((err) => {
+        console.log("err", err)
+    })
+
+})
+
+app.listen(5000, () => {
     console.log("server started")
 })
