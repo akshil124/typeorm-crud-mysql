@@ -48,7 +48,6 @@ app.post("/adduser", async (req, res) => {
         .then(() => {
             res.send("data possted")
         }).catch((err) => {
-        console.log("err", err)
         res.send(err)
     })
 
@@ -79,7 +78,6 @@ app.get("/getusers", async (req, res) => {
             })
         }
     })
-    // console.log("user",users)
     res.send(users)
 })
 
@@ -113,7 +111,6 @@ app.delete("/deleteuser/:id", async (req, res) => {
 app.put("/updateuser/:id", async (req, res) => {
     const data = await dataSource.getRepository("user").findOneBy({id: req.params.id})
     if(req?.body?.hobby){
-        console.log("hii")
         data?.hobby.map(async (l)=>{
             await dataSource.getRepository("hobby").delete(l?.id)
         })
@@ -129,9 +126,11 @@ app.put("/updateuser/:id", async (req, res) => {
         }) || data?.hobby
     }
 
-    await dataSource.getRepository('user').save(user).then((data) => {
-        if (data.affected) {
+    await dataSource.getRepository('user').save(user).then(() => {
+        if (Object.keys(req?.body).length !== 0) {
             res.send("user updated")
+        }else {
+            res.send("nothing update")
         }
     }).catch((err) => {
         console.log("err", err)
