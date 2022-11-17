@@ -3,6 +3,8 @@ const typeorm = require("typeorm")
 const bodyparser = require("body-parser")
 const User = require("./entity/User")
 const Hooby = require("./entity/hobby")
+const Job = require("./entity/job")
+const Education = require("./entity/education")
 const {createDatabase} = require("typeorm-extension")
 const app = express()
 app.use(bodyparser())
@@ -25,12 +27,12 @@ const dataSource = new typeorm.DataSource({
     username: "root",
     password: "root",
     database: "user",
-    entities: [User, Hooby],
+    entities: [User, Hooby, Job, Education],
     synchronize: true,
 })
 
 app.post("/adduser", async (req, res) => {
-
+    console.log("body", req.body)
     var hobby = req?.body?.hobby?.map((l) => {
         return {
             name: l
@@ -40,7 +42,9 @@ app.post("/adduser", async (req, res) => {
         name: req?.body?.name,
         email: req?.body?.email,
         password: req?.body?.password,
-        hobby: hobby
+        hobby: hobby,
+        job: req?.body?.job,
+        education: req?.body?.education,
     }
 
     let postRepository = dataSource.getRepository("user")
@@ -73,9 +77,11 @@ app.get("/getusers", async (req, res) => {
             name: l?.name,
             email: l?.email,
             password: l?.password,
-            hobby: l?.hobby?.map((i)=>{
+            hobby: l?.hobby?.map((i) => {
                 return i?.name
-            })
+            }),
+            job: l?.job,
+            education: l?.education
         }
     })
     res.send(users)
@@ -88,53 +94,69 @@ app.get("/getusers/:id", async (req, res) => {
         name: data?.name,
         email: data?.email,
         password: data?.password,
-        hobby: data?.hobby?.map((i)=>{
+        hobby: data?.hobby?.map((i) => {
             return i?.name
-        })
+        }),
+        job: data?.job,
+        education: data?.education
     }
     res.send(user)
 })
 
 app.delete("/deleteuser/:id", async (req, res) => {
+
     const data = await dataSource.getRepository("user").findOneBy({id: req.params.id})
-    data?.hobby.map(async (l)=>{
-        await dataSource.getRepository("hobby").delete(l?.id)
-    })
+
     await dataSource.getRepository("user").delete(req.params.id).then((data) => {
         if (data.affected) {
             res.send("user deleted")
         }
     })
+    await dataSource.getRepository("job").delete(data?.job?.id)
+    await dataSource.getRepository("education").delete(data?.education?.id)
+    data?.hobby.map(async (l) => {
+        await dataSource.getRepository("hobby").delete(l?.id)
+    })
 
 })
 
 app.put("/updateuser/:id", async (req, res) => {
+
     const data = await dataSource.getRepository("user").findOneBy({id: req.params.id})
-    if(req?.body?.hobby){
-        data?.hobby.map(async (l)=>{
-            await dataSource.getRepository("hobby").delete(l?.id)
-        })
-    }
 
     let user = {
-        id : parseInt(req.params.id) || data?.id,
-        name : req?.body?.name || data?.name,
-        email : req?.body?.email || data?.email,
-        password : req?.body?.password || data?.password,
-        hobby : req?.body?.hobby?.map((i)=>{
-            return {name : i}
-        }) || data?.hobby
+        id: parseInt(req.params.id) || data?.id,
+        name: req?.body?.name || data?.name,
+        email: req?.body?.email || data?.email,
+        password: req?.body?.password || data?.password,
+        hobby: req?.body?.hobby?.map((i) => {
+            return {name: i}
+        }) || data?.hobby,
+        job : req?.body?.job || data?.job ,
+        education : req?.body?.education || data?.education
     }
 
     await dataSource.getRepository('user').save(user).then(() => {
         if (Object.keys(req?.body).length !== 0) {
             res.send("user updated")
-        }else {
+        } else {
             res.send("nothing update")
         }
     }).catch((err) => {
         console.log("err", err)
     })
+
+    if(req?.body?.job){
+        await dataSource.getRepository("job").delete(data?.job?.id)
+    }
+    if(req?.body?.education){
+        await dataSource.getRepository("education").delete(data?.education?.id)
+    }
+    if (req?.body?.hobby) {
+        data?.hobby.map(async (l) => {
+            await dataSource.getRepository("hobby").delete(l?.id)
+        })
+    }
 
 })
 

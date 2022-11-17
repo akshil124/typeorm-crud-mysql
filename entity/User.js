@@ -27,6 +27,20 @@ const User = new typeorm.EntitySchema({
             cascade: true,
             eager : true
         },
+        job: {
+            target: "job",
+            type: "one-to-one",
+            joinColumn:true,
+            cascade: true,
+            eager : true
+        },
+        education: {
+            target: "education",
+            type: "one-to-one",
+            joinColumn:true,
+            cascade: true,
+            eager : true
+        },
     },
 })
 module.exports = User
